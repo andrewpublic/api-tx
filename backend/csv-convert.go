@@ -30,7 +30,7 @@ func mapTxToStringSlice(txMappedSlice []TxMapped) [][]string {
 
 	for _, t := range txMappedSlice {
 		stringSliceForCsv = append(stringSliceForCsv, []string{
-			strconv.FormatInt(t.Time, 10), t.Cost, t.Details,
+			strconv.FormatInt(t.Time, 10), t.Cost, t.Category, t.Details,
 		})
 	}
 
