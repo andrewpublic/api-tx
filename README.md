@@ -1,44 +1,50 @@
 # Up Bank API Magic
 
-Preview images shown at the bottom.
+🥨 Preview images shown at the bottom 🥨
 
 ### Instructions to run locally
+🍞 First create a .env file in the root of your local directory 🍞
 
-FIRST you will need a .env file in the root of this directory
-with:
-AWS_ACCESS_KEY_ID=some_aws_public_key
-AWS_SECRET_ACCESS_KEY=some_aws_secret_key
+🍒 Add the following:
+* AWS_ACCESS_KEY_ID=some_aws_public_key
+* AWS_SECRET_ACCESS_KEY=some_aws_secret_key
 
-open a terminal
-brew install go
-cd api-tx/backend
-go run server.go http-fetch.go aws-utils.go csv-convert.go
+🍣 Running backend locally:
+* open a terminal
+* brew install go
+* cd api-tx/backend
+* go run server.go http-fetch.go aws-utils.go csv-convert.go
+
 > [!IMPORTANT]  
-> Yes, we will clean it up later
+> Yes, we will clean it up later!
 
-open another terminal
-cd api-tx/frontend
-npm install
-npm run dev
+🍏 Running frontend locally:
+* open another terminal
+* cd api-tx/frontend
+* npm install
+* npm run dev
 
-open a web browser
-open http://localhost/5173/ (or whatever is shown in the frontend terminal)
+⛈️ Now open a web browser and enter http://localhost/5173/ ⛈️
 
-go into up bank mobile app
-click "Up" then "Data Sharing"
-get a Personal Access Token
-copy
+🍇 Retrieve your Up Bank API Key:
+* go into up bank mobile app
+* click "Up" then "Data Sharing"
+* get a Personal Access Token
+* copy and paste into web browser field
+** also you should save it somewhere, we don't store it in our system
 
-paste into web browser field
 > [!TIP]
-> Your API Key is safe, your transaction data will get saved and uploaded to AWS S3 (despite what the website says)
+> Your API Key is safe, however your transaction data will get saved and uploaded to AWS S3 (despite what the website says)
 
-you should see some stuff
+💡💡💡💡💡💡💡💡💡💡💡💡  
+🥳 You should see some stuff 🥳  
+💡💡💡💡💡💡💡💡💡💡💡💡
 
 > [!CAUTION]
 > TODO: STREAMLIT INTEGRATION
 
-### Preview
+### ----------- Preview -------------
+
 
 ![2CB6A7D0-24EB-4BEB-B609-41619F32266F](https://github.com/user-attachments/assets/9e1bbf80-8e76-4819-b986-c798340f1b85)
 
