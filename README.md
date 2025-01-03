@@ -2,6 +2,9 @@
 
 🥨 Preview images shown at the bottom 🥨
 
+### What does this do? ###
+🎩 We retrieve your Up Bank transactions, convert it into a CSV, then apply _DATA SCIENCE_ ™️
+
 ### Instructions to run locally
 🍞 First create a .env file in the root of your local directory 🍞
 
