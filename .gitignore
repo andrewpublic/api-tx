@@ -1,0 +1,7 @@
+secrets.toml
+.svelte-kit/
+node_modules/
+env/
+.env
+*.csv
+dummy*
