@@ -8,10 +8,10 @@ jobs:
       - run: echo "Hello World"
       - run: echo "Triggered by ${{ github.event_name }}"
       - run: echo "Running on ${{ runner.os }}"
-      - run: echo "Branch: ${{ github.ref }}, repo: ${{ github.respository }}"
+      - run: echo "Branch ${{ github.ref }}, repo ${{ github.respository }}"
       - name: Check out code
         uses: actions/checkout@v4
-      - run: echo "${{ github.repository }} has been checked out."
+      - run: echo "${{ github.repository }} has been checked out.
       - name: List Files
         run: |
           ls ${{ github.workspace }}
