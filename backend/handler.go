@@ -1,22 +1,27 @@
 package main
 
-import "fmt"
+import (
+//    "context"
+    
+//    "github.com/aws/aws-lambda-go/events"
+    "github.com/aws/aws-lambda-go/lambda"
+)
 
-func Hello(name ...string) (string, error) {
-    if len(name) > 1 {
-        return "", fmt.Errorf("too many arguments in variadic function")
-    }
+type HttpResponse struct {
+    StatusCode int
+    Body       string
+}
 
-    if len(name) == 0 {
-        return "Hello, world!", nil
-    }
-
-    return fmt.Sprintf("Hello, %s!", name[0]), nil
+// func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+ //   return events.APIGatewayProxyResponse{
+func handler() (HttpResponse, error) {
+    return HttpResponse{
+        StatusCode: 200,
+        Body: `Hello World!`,
+    }, nil
 }
 
 func main() {
-    fmt.Println(Hello())
+    lambda.Start(handler)
 }
-
-//func handler(ctx context.Context, request events.APIGatewayProxyRequest)
 

@@ -2,20 +2,18 @@ package main
 
 import "testing"
 
-func TestHello(t *testing.T) {
-    t.Run("SubTest 1: Detailed hello world", func(t *testing.T) {
-        got, _ := Hello("Andrew")
-        want := "Hello, Andrew!"
-        assertCorrectMessage(t, got, want)
-    })
-    t.Run("SubTest2: Default hello world", func(t *testing.T) {
-        got, _ := Hello()
-        want := "Hello, world!"
-        assertCorrectMessage(t, got, want)
+func TestHandler(t *testing.T) {
+    t.Run("Return hello world response", func(t *testing.T) {
+        got, _ := handler()
+        want := HttpResponse{
+            StatusCode: 200,
+            Body:       `Hello World!`,
+        }
+        assertCorrectResponse(t, got, want)
     })
 }
 
-func assertCorrectMessage(t testing.TB, got, want string) {
+func assertCorrectResponse(t testing.TB, got, want HttpResponse) {
     t.Helper() // tells test runner to report line number from where this
                // assert helper function is called
     if got != want {
