@@ -5,14 +5,18 @@ jobs:
   Deploy-Infra:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Hello World"
-      - run: echo "Triggered by ${{ github.event_name }}"
-      - run: echo "Running on ${{ runner.os }}"
-      - run: echo "Branch ${{ github.ref }}, repo ${{ github.respository }}"
       - name: Check out code
         uses: actions/checkout@v4
-      - run: echo "${{ github.repository }} has been checked out."
-      - name: List Files
-        run: |
-          ls ${{ github.workspace }}
-      - run: echo "This job's status is ${{ job.status }}"
+
+      - name: Configure Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+
+      - name: Terraform init
+        id: init
+        run: terraform init -input=false
