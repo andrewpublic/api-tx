@@ -1,29 +1,44 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
-	"github.com/gorilla/mux"
+	"github.com/aws/aws-lambda-go/events"
 )
+
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyRequest, error) {
+	formData, err := url.ParseQuery(request.Body)
+
+	if err != nil {
+		log.Printf("Error parsing form data: %s", err)
+		return events.APIGatewayProxyRequest{StatusCode: 400}, err
+	}
+
+	key1 := formData.Get("key1")
+	key2 := formData.Get("key2")
+
+	log.Printf("Received Key1: %s", key1)
+	log.Printf("Received Key2: %s", key2)
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: 200,
+		Body:       fmt.Sprintf(`%s, %s`, key1, key2),
+	}, nil
+}
 
 func main() {
 	loadEnv()
 
-	router := mux.NewRouter()
-	// outer.HandleFunc("/", getInfo).Methods("GET")
-	router.HandleFunc("/", postInfo).Methods("POST")
+	router := loadRoutes()
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
-
-// func getInfo(w http.ResponseWriter, r *http.Request) {
-// 	enableCors(&w)
-
-// 	json.NewEncoder(w).Encode(tx)
-// }
 
 func postInfo(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
