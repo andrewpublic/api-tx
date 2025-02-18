@@ -1,5 +1,5 @@
 <script lang="ts">
-	import BankFormInput from '$lib/components/BankFormInput.svelte';
+  import BankFormInput from '$lib/components/BankFormInput.svelte';
   import { GradientButton } from 'flowbite-svelte';
 
   let bankApiKey = "";
