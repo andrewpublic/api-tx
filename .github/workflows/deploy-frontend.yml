@@ -26,12 +26,12 @@ jobs:
 
       - name: Terraform fmt
         id: tf-fmt
-        working-directory: infra/frontend
+        working-directory: ./infra/frontend
         run: terraform fmt -check
 
       - name: Terraform init
         id: tf-init
-        working-directory: infra/frontend
+        working-directory: ./infra/frontend
         run: |
           terraform init -input=false \
           -backend-config="bucket=${{ secrets.TFSTATE_BUCKET }}" \
@@ -42,6 +42,5 @@ jobs:
 
       - name: Terraform Apply
         id: tf-apply
-        working-directory: infra/frontend
-        #run: terraform apply -input=false -var-file="env/prod.tfvars"
-        run: ls ${{ github.workspace }}
+        working-directory: ./infra/frontend
+        run: terraform apply -input=false -var-file=env/prod.tfvars
