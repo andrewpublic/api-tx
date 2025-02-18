@@ -32,4 +32,10 @@ jobs:
       - name: Terraform init
         id: tf-init
         working-directory: infra/frontend
-        run: terraform init -input=false
+        run: |
+          terraform init -input=false \
+          -backend-config="bucket=${{ secrets.TFSTATE_BUCKET }}" \
+          -backend-config="key=${{ secrets.TFSTATE_KEY }}" \
+          -backend-config="dynamodb_table=${{ secrets.TFSTATE_DYNAMODB }}" \
+          -backend-config="encrypt=true" \
+          -backend-config="region=ap-southeast-2" \
