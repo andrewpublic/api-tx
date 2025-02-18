@@ -43,4 +43,4 @@ jobs:
       - name: Terraform Apply
         id: tf-apply
         working-directory: infra/frontend
-        run: terraform apply -input=false -var-file=env/prod.tfvars
+        run: terraform apply -input=false -auto-approve -var-file=env/prod.tfvars
