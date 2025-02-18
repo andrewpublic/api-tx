@@ -39,3 +39,9 @@ jobs:
           -backend-config="dynamodb_table=${{ secrets.TFSTATE_DYNAMODB }}" \
           -backend-config="encrypt=true" \
           -backend-config="region=ap-southeast-2" \
+
+      - name: Terraform Apply
+        id: tf-apply
+        working-directory: infra/frontend
+        run: terraform apply -input=false -var-file=env/prod.tfvars
+
