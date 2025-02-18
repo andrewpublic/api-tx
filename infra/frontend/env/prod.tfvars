@@ -1,2 +1,2 @@
-frontend_bucket_name = "frontend_spa"
+frontend_bucket_name = "frontend-static-spa"
 
