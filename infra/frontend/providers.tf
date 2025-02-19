@@ -7,6 +7,12 @@ terraform {
   }
 
   backend "s3" {}
+
+  default_tags {
+    tags = {
+      CreatedBy = "Terraform"
+    }
+  }
 }
 
 provider "aws" {

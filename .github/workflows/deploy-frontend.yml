@@ -13,6 +13,10 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
+      - name: Build Frontend
+        working-directory: frontend
+        run: yarn build
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
