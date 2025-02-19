@@ -1,5 +1,4 @@
 name: Deploy Frontend
-run-name: ${{ github.actor}} Frontend CI/CD demo
 on: push
 
 permissions:

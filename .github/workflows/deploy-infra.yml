@@ -1,5 +1,4 @@
 name: Deploy Infra
-run-name: ${{ github.actor}} demo
 on: push
 jobs:
   Deploy-Infra:

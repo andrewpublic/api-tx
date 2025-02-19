@@ -12,6 +12,6 @@ resource "aws_s3_object" "frontend" {
   bucket = aws_s3_bucket.frontend.id
   key    = each.key
   source = "${local.frontend_static_path}/${each.value}"
-  etag   = filemd5("${local.frontned_static_path}/${each.value}")
+  etag   = filemd5("${local.frontend_static_path}/${each.value}")
 }
 
