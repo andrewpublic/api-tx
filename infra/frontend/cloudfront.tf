@@ -10,6 +10,30 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
   signing_protocol                  = "sigv4"
 }
 
+# resource "aws_cloudfront_response_headers_policy" "frontend_js" {
+#   name = "frontend-js-mime"
+# 
+#   custom_headers_config {
+#     items {
+#       header = "Content-Type"
+#       override = true
+#       value = "application/javascript"
+#     }
+#   }
+# }
+
+resource "aws_cloudfront_response_headers_policy" "frontend_html" {
+  name = "frontend-html-mime"
+
+  custom_headers_config {
+    items {
+      header   = "Content-Type"
+      override = true
+      value    = "application/html"
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
   default_root_object = "index.html"
@@ -24,6 +48,15 @@ resource "aws_cloudfront_distribution" "frontend" {
     #  origin_protocol_policy = "http-only"
     #  origin_ssl_protocols   = ["TLSv1"]
     #}
+  }
+
+  ordered_cache_behavior {
+    path_pattern = "*.html"
+    #     allowed_methods  = ["GET", "HEAD"]
+    #    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = local.s3_origin_id
+
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend_html.id
   }
 
   default_cache_behavior {
