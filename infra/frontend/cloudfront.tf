@@ -3,7 +3,8 @@ locals {
 }
 
 resource "aws_cloudfront_distribution" "frontend" {
-  enabled = true
+  enabled             = true
+  default_root_object = "index.html"
 
   origin {
     origin_id   = local.s3_origin_id
@@ -17,7 +18,6 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   default_cache_behavior {
-
     target_origin_id = local.s3_origin_id
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
