@@ -8,7 +8,7 @@ resource "aws_s3_bucket" "frontend" {
 
 resource "aws_s3_object" "frontend" {
   for_each = fileset(local.frontend_static_path, "**")
-  
+
   bucket = aws_s3_bucket.frontend.id
   key    = each.key
   source = "${local.frontend_static_path}/${each.value}"
