@@ -48,3 +48,4 @@ jobs:
         id: tf-apply
         working-directory: infra/frontend
         run: terraform apply -input=false -auto-approve -var-file=env/prod.tfvars
+
