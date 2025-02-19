@@ -7,15 +7,15 @@ terraform {
   }
 
   backend "s3" {}
+}
+
+provider "aws" {
+  region = "ap-southeast-2"
 
   default_tags {
     tags = {
       CreatedBy = "Terraform"
     }
   }
-}
-
-provider "aws" {
-  region = "ap-southeast-2"
 }
 
