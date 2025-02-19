@@ -2,19 +2,28 @@ locals {
   s3_origin_id = "${var.frontend_bucket_name}-origin"
 }
 
+resource "aws_cloudfront_origin_access_control" "frontend" {
+  name                              = "${local.s3_origin_id}-oac"
+  description                       = "Origin Access Control for S3 Cloudfront"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
   default_root_object = "index.html"
 
   origin {
-    origin_id   = local.s3_origin_id
-    domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1"]
-    }
+    origin_id                = local.s3_origin_id
+    origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
+    domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
+    #custom_origin_config {
+    #  http_port              = 80
+    #  https_port             = 443
+    #  origin_protocol_policy = "http-only"
+    #  origin_ssl_protocols   = ["TLSv1"]
+    #}
   }
 
   default_cache_behavior {
