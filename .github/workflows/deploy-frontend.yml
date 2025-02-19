@@ -13,6 +13,10 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
+      - name: Install Dependencies
+        working-directory: frontend
+        run: yarn install
+
       - name: Build Frontend
         working-directory: frontend
         run: yarn build
