@@ -17,7 +17,7 @@ resource "aws_cloudfront_response_headers_policy" "frontend_js" {
     items {
       header   = "Content-Type"
       override = true
-      value    = "application/javascript"
+      value    = "text/javascript"
     }
   }
 }
