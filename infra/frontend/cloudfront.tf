@@ -51,11 +51,12 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   ordered_cache_behavior {
-    path_pattern           = "*.html"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    viewer_protocol_policy = "redirect-to-https"
-    target_origin_id       = local.s3_origin_id
+    path_pattern               = "*.html"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    viewer_protocol_policy     = "redirect-to-https"
+    target_origin_id           = local.s3_origin_id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend_html.id
 
     forwarded_values {
       query_string = true
