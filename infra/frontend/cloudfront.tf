@@ -29,7 +29,7 @@ resource "aws_cloudfront_response_headers_policy" "frontend_html" {
     items {
       header   = "Content-Type"
       override = true
-      value    = "application/html"
+      value    = "text/html"
     }
   }
 }
