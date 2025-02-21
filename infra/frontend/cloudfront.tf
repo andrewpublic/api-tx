@@ -10,17 +10,17 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
   signing_protocol                  = "sigv4"
 }
 
-# resource "aws_cloudfront_response_headers_policy" "frontend_js" {
-#   name = "frontend-js-mime"
-# 
-#   custom_headers_config {
-#     items {
-#       header = "Content-Type"
-#       override = true
-#       value = "application/javascript"
-#     }
-#   }
-# }
+resource "aws_cloudfront_response_headers_policy" "frontend_js" {
+  name = "frontend-js-mime"
+
+  custom_headers_config {
+    items {
+      header   = "Content-Type"
+      override = true
+      value    = "application/javascript"
+    }
+  }
+}
 
 resource "aws_cloudfront_response_headers_policy" "frontend_html" {
   name = "frontend-html-mime"
@@ -57,6 +57,23 @@ resource "aws_cloudfront_distribution" "frontend" {
     viewer_protocol_policy     = "redirect-to-https"
     target_origin_id           = local.s3_origin_id
     response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend_html.id
+
+    forwarded_values {
+      query_string = true
+
+      cookies {
+        forward = "all"
+      }
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern               = "*.js"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    viewer_protocol_policy     = "redirect-to-https"
+    target_origin_id           = local.s3_origin_id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend_js.id
 
     forwarded_values {
       query_string = true
