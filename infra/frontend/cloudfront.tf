@@ -34,6 +34,31 @@ resource "aws_cloudfront_response_headers_policy" "frontend_html" {
   }
 }
 
+resource "aws_cloudfront_response_headers_policy" "frontend_css" {
+  name = "frontend-css-mime"
+
+  custom_headers_config {
+    items {
+      header   = "Content-Type"
+      override = true
+      value    = "text/css"
+    }
+  }
+}
+
+
+resource "aws_cloudfront_response_headers_policy" "frontend_json" {
+  name = "frontend-json-mime"
+
+  custom_headers_config {
+    items {
+      header   = "Content-Type"
+      override = true
+      value    = "application/json"
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
   default_root_object = "index.html"
@@ -74,6 +99,40 @@ resource "aws_cloudfront_distribution" "frontend" {
     viewer_protocol_policy     = "redirect-to-https"
     target_origin_id           = local.s3_origin_id
     response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend_js.id
+
+    forwarded_values {
+      query_string = true
+
+      cookies {
+        forward = "all"
+      }
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern               = "*.css"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    viewer_protocol_policy     = "redirect-to-https"
+    target_origin_id           = local.s3_origin_id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend_css.id
+
+    forwarded_values {
+      query_string = true
+
+      cookies {
+        forward = "all"
+      }
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern               = "*.json"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    viewer_protocol_policy     = "redirect-to-https"
+    target_origin_id           = local.s3_origin_id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend_json.id
 
     forwarded_values {
       query_string = true
