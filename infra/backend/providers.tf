@@ -5,9 +5,17 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {}
 }
 
 provider "aws" {
   region = "ap-southeast-2"
+
+  default_tags {
+    tags = {
+      CreatedBy = "Terraform"
+    }
+  }
 }
 

@@ -7,15 +7,35 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-southeast-2
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE }}
+
       - name: Configure Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.9.8"
 
       - name: Terraform fmt
-        id: fmt
+        id: tf-fmt
+        working-directory: infra/backend
         run: terraform fmt -check
 
       - name: Terraform init
-        id: init
-        run: terraform init -input=false
+        id: tf-init
+        working-directory: infra/backend
+        run: |
+          terraform init -input=false \
+          -backend-config="bucket=${{ secrets.TFSTATE_BUCKET }}" \
+          -backend-config="key=${{ secrets.TFSTATE_KEY }}" \
+          -backend-config="dynamodb_table=${{ secrets.TFSTATE_DYNAMODB }}" \
+          -backend-config="encrypt=true" \
+          -backend-config="region=ap-southeast-2" \
+
+      - name: Terraform Plan
+        id: tf-apply
+        working-directory: infra/backend
+        run: terraform plan var-file=env/prod.tfvars
+
