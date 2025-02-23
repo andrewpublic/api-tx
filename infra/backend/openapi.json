@@ -1,0 +1,64 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "Api-Tx",
+    "description" : "API Gateway for my Api-Tx backend",
+    "version" : "2025-02-23T01:00:44Z"
+  },
+  "servers" : [ {
+    "url" : "https://g3jw9aesqi.execute-api.ap-southeast-2.amazonaws.com/{basePath}",
+    "variables" : {
+      "basePath" : {
+        "default" : "api"
+      }
+    }
+  } ],
+  "paths" : {
+    "/{proxy+}" : {
+      "post" : {
+        "parameters" : [ {
+          "name" : "proxy",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "200 response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Empty"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration" : {
+          "type" : "mock",
+          "responses" : {
+            "default" : {
+              "statusCode" : "200"
+            }
+          },
+          "requestTemplates" : {
+            "application/json" : "{\"statusCode\": 200}"
+          },
+          "passthroughBehavior" : "when_no_match",
+          "cacheNamespace" : "eer5x8",
+          "cacheKeyParameters" : [ "method.request.path.proxy" ]
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Empty" : {
+        "title" : "Empty Schema",
+        "type" : "object"
+      }
+    }
+  }
+}
