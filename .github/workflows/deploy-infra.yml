@@ -1,5 +1,10 @@
 name: Deploy Infra
 on: push
+
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   Deploy-Infra:
     runs-on: ubuntu-latest
