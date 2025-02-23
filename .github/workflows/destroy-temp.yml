@@ -1,6 +1,8 @@
 name: Destroy
 on:
   push:
+    branches:
+      - destroy
 
 permissions:
   id-token: write
