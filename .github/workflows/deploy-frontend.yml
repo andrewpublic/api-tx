@@ -50,6 +50,11 @@ jobs:
           -backend-config="encrypt=true" \
           -backend-config="region=ap-southeast-2" \
 
+      - name: Terraform Workspapce
+        id: tf-workspace
+        working-directory: infra/frontend
+        run: terraform workspace select -or-create frontend
+
       - name: Terraform Apply
         id: tf-apply
         working-directory: infra/frontend
