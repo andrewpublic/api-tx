@@ -34,10 +34,9 @@ jobs:
           -backend-config="encrypt=true" \
           -backend-config="region=ap-southeast-2" \
 
-
       - name: Terraform Plan
         if: github.ref_name != github.event.repository.default_branch
-        id: tf-apply
+        id: tf-plan
         working-directory: infra/backend
         run: terraform plan var-file=env/prod.tfvars
 
