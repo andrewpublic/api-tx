@@ -20,3 +20,4 @@ func assertCorrectResponse(t testing.TB, got, want HttpResponse) {
         t.Errorf("got %q want %q", got, want)
     }
 }
+
