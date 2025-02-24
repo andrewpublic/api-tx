@@ -2,6 +2,7 @@ package main
 
 import (
 //    "context"
+    "fmt"
     "net/http"
     "log"
     "encoding/json"
@@ -15,10 +16,36 @@ type HttpResponse struct {
     Body       string `json:"Body"`
 }
 
+type RegisterRequestBody struct {
+    ApiKey string `json:"ApiKey"`
+}
+
+func (a *RegisterRequestBody) validate() error {
+    if len(a.ApiKey) < 10 {
+        return fmt.Errorf("ApiKey invalid")
+    }
+    return nil
+}
+
 func RegisterApiKeyHandler(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodPost {
         http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
         return
+    }
+
+    requestBody := &RegisterRequestBody{}
+
+    defer r.Body.Close()
+    // one liner
+    // if err := json.NewDecoder(r.Body).Decode(requestBody); err != nil {
+    err := json.NewDecoder(r.Body).Decode(requestBody);
+    if err != nil {
+        log.Panic(err)
+    }
+
+    err = requestBody.validate()
+    if err != nil {
+        log.Panic(err)
     }
 
     response := HttpResponse{200, "OK"}
