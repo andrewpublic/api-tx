@@ -42,11 +42,9 @@ func TestPostRegister(t *testing.T) {
                 t.Fatalf("Failed to marshal: %v", err)
             }
 
-            // json is stored as byte[] not string
+            // in golang json is stored as byte[] not string
             // so we have to cast as string
             if got != string(want) {
-                fmt.Println("want: " + got)
-                fmt.Println("want: " + string(want))
                 t.Errorf("got %v, want %v", got, string(want))
             }
         })
