@@ -3,6 +3,7 @@ package main
 import (
 //    "context"
     "net/http"
+    "log"
     "encoding/json"
 
 //     "github.com/aws/aws-lambda-go/events"
@@ -15,11 +16,21 @@ type HttpResponse struct {
 }
 
 func RegisterApiKeyHandler(w http.ResponseWriter, r *http.Request) {
-//    b, _ := json.Marshal(HttpResponse{200, "OK"})
-    response := HttpResponse{200, "OK"}
-    
-//    fmt.Fprint(w, b)
+    if r.Method != http.MethodPost {
+        http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+        return
+    }
 
+    response := HttpResponse{200, "OK"}
     json.NewEncoder(w).Encode(response)
+}
+
+func main() {
+    http.HandleFunc("/register", RegisterApiKeyHandler)
+
+    err := http.ListenAndServe(":3333", nil)
+    if err != nil {
+        log.Panic(err)
+    }
 }
 
