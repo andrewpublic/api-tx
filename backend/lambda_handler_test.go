@@ -2,10 +2,9 @@ package main
 
 import (
     "testing"
-    "encoding/json"
+    "fmt"
     "net/http"
     "net/http/httptest"
-    "fmt"
 )
 
 func TestPostRegister(t *testing.T) {
@@ -13,14 +12,14 @@ func TestPostRegister(t *testing.T) {
         name             string
         recorder         *httptest.ResponseRecorder
         request          *http.Request
-        expectedResponse HttpResponse
+        expectedResponse string
         expectedHeader   string
     }{
         {
             name:           "OK",
             recorder:       httptest.NewRecorder(),
             request:        httptest.NewRequest("POST", "/register", nil),
-            expectedResponse: HttpResponse{200, "OK"},
+            expectedResponse: fmt.Sprintf("%s\n", `{"StatusCode":200,"Body":"OK"}`),
         },
     }
 
@@ -34,17 +33,11 @@ func TestPostRegister(t *testing.T) {
             handler.ServeHTTP(response, request)
 
             got := response.Body.String()
-
-            httpResponse := HttpResponse{200, "OK"}
-
-            want, err := json.Marshal(httpResponse)
-            if err != nil {
-                t.Fatalf("Failed to marshal: %v", err)
-            }
+            want := test.expectedResponse
 
             // in golang json is stored as byte[] not string
             // so we have to cast as string
-            if got != string(want) {
+            if got != want {
                 t.Errorf("got %v, want %v", got, string(want))
             }
         })
