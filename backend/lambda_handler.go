@@ -38,8 +38,6 @@ func RegisterApiKeyHandler(w http.ResponseWriter, r *http.Request) {
     requestBody := &RegisterRequestBody{}
 
     defer r.Body.Close()
-    // one liner
-    // if err := json.NewDecoder(r.Body).Decode(requestBody); err != nil {
     err := json.NewDecoder(r.Body).Decode(requestBody);
     if err != nil {
         http.Error(w, "Request contained unexpected json data", http.StatusBadRequest)
