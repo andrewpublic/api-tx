@@ -6,9 +6,11 @@ import (
     "net/http"
     "log"
     "encoding/json"
+    "os"
 
 //     "github.com/aws/aws-lambda-go/events"
-//     "github.com/aws/aws-lambda-go/lambda"
+    "github.com/aws/aws-lambda-go/lambda"
+    "github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 )
 
 type HttpResponse struct {
@@ -22,7 +24,7 @@ type RegisterRequestBody struct {
 
 func (a *RegisterRequestBody) validate() error {
     if len(a.ApiKey) < 10 {
-        return fmt.Errorf("ApiKey invalid")
+        return fmt.Errorf("ApiKey too short")
     }
     return nil
 }
@@ -46,7 +48,7 @@ func RegisterApiKeyHandler(w http.ResponseWriter, r *http.Request) {
 
     err = requestBody.validate()
     if err != nil {
-        http.Error(w, fmt.Sprint("%v", err), http.StatusBadRequest)
+        http.Error(w, fmt.Sprint(err), http.StatusBadRequest)
         return
     }
 
@@ -57,9 +59,15 @@ func RegisterApiKeyHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
     http.HandleFunc("/register", RegisterApiKeyHandler)
 
-    err := http.ListenAndServe(":3333", nil)
-    if err != nil {
-        log.Panic(err)
+    if runtime, _ := os.LookupEnv("IS_RUNTIME_LAMBDA"); runtime == "true" {
+        log.Println("Starting serverless environment...")
+        lambda.Start(httpadapter.New(http.DefaultServeMux).ProxyWithContext)
+    } else {
+        log.Println("Starting serverful environment, listening...")
+        err := http.ListenAndServe(":3333", nil)
+        if err != nil {
+            log.Panic(err)
+        }
     }
 }
 
