@@ -15,13 +15,6 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        working-directory: frontend
-        run: yarn install
-
-      - name: Build Frontend
-        working-directory: frontend
-        run: yarn build
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -50,8 +43,24 @@ jobs:
           -backend-config="encrypt=true" \
           -backend-config="region=ap-southeast-2" \
 
+      - name: Terraform Workspace
+        id: tf-workspace
+        working-directory: infra/backend
+        run: terraform workspace select -or-create backend
+
       - name: Terraform destroy
         id: tf-destroy
         working-directory: infra/destroy
         run: terraform apply -input=false -auto-approve -var-file=env/prod.tfvars
+
+      - name: Terraform Default Workspace
+        id: tf-workspace-default
+        working-directory: infra/backend
+        run: terraform workspace select default
+
+      - name: Terraform Workspace Delete
+        id: tf-workspace-delete
+        working-directory: infra/destroy
+        run: terraform workspace delete backend
+
 
