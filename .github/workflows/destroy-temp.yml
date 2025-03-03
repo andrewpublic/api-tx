@@ -45,7 +45,7 @@ jobs:
 
       - name: Terraform Workspace
         id: tf-workspace
-        working-directory: infra/backend
+        working-directory: infra/destroy
         run: terraform workspace select -or-create backend
 
       - name: Terraform destroy
@@ -55,7 +55,7 @@ jobs:
 
       - name: Terraform Default Workspace
         id: tf-workspace-default
-        working-directory: infra/backend
+        working-directory: infra/destroy
         run: terraform workspace select default
 
       - name: Terraform Workspace Delete
