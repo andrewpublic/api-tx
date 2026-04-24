@@ -1,7 +1,7 @@
 resource "aws_cloudwatch_event_rule" "hourly_fetch" {
   name                = "api-tx-hourly-fetch"
-  description         = "Trigger Up Bank transaction fetch every hour"
-  schedule_expression = "rate(1 hour)"
+  description         = "Trigger Up Bank transaction fetch every 1 minute"
+  schedule_expression = "rate(1 minute)"
 }
 
 resource "aws_cloudwatch_event_target" "fetch_lambda" {
