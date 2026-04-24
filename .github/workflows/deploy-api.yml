@@ -1,0 +1,78 @@
+name: Deploy API (Lambdas + API Gateway + EventBridge)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lambdas/**"
+      - "infra/api/**"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE }}
+          aws-region: ap-southeast-2
+
+      - name: Build lambdas
+        run: |
+          chmod +x scripts/build-lambdas.sh
+          ./scripts/build-lambdas.sh
+
+      - name: Upload lambda packages to S3
+        env:
+          BUCKET: ${{ secrets.LAMBDA_PACKAGES_BUCKET }}
+        run: |
+          for name in fetch enrich sheets-sync api; do
+            aws s3 cp lambdas/dist/${name}.zip s3://${BUCKET}/${name}.zip
+          done
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive
+        working-directory: infra/api
+
+      - name: Terraform init
+        working-directory: infra/api
+        env:
+          TFSTATE_BUCKET: ${{ secrets.TFSTATE_BUCKET }}
+          TFSTATE_DYNAMODB: ${{ secrets.TFSTATE_DYNAMODB }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${TFSTATE_BUCKET}" \
+            -backend-config="key=api-tx/api.tfstate" \
+            -backend-config="region=ap-southeast-2" \
+            -backend-config="dynamodb_table=${TFSTATE_DYNAMODB}"
+
+      - name: Terraform apply
+        working-directory: infra/api
+        env:
+          TF_VAR_tfstate_bucket: ${{ secrets.TFSTATE_BUCKET }}
+        run: terraform apply -auto-approve
+
+      - name: Update lambda function code
+        env:
+          BUCKET: ${{ secrets.LAMBDA_PACKAGES_BUCKET }}
+        run: |
+          aws lambda update-function-code --function-name api-tx-fetch       --s3-bucket ${BUCKET} --s3-key fetch.zip
+          aws lambda update-function-code --function-name api-tx-enrich      --s3-bucket ${BUCKET} --s3-key enrich.zip
+          aws lambda update-function-code --function-name api-tx-sheets-sync --s3-bucket ${BUCKET} --s3-key sheets-sync.zip
+          aws lambda update-function-code --function-name api-tx-api         --s3-bucket ${BUCKET} --s3-key api.zip

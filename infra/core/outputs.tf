@@ -1,0 +1,17 @@
+output "users_table_name" { value = aws_dynamodb_table.users.name }
+output "transactions_table_name" { value = aws_dynamodb_table.transactions.name }
+output "raw_bucket_name" { value = aws_s3_bucket.raw_transactions.id }
+output "kms_key_arn" { value = aws_kms_key.api_tx.arn }
+output "kms_key_id" { value = aws_kms_key.api_tx.id }
+output "enrich_queue_url" { value = aws_sqs_queue.enrich.url }
+output "enrich_queue_arn" { value = aws_sqs_queue.enrich.arn }
+output "sheets_queue_url" { value = aws_sqs_queue.sheets.url }
+output "sheets_queue_arn" { value = aws_sqs_queue.sheets.arn }
+output "fetch_role_arn" { value = aws_iam_role.fetch.arn }
+output "enrich_role_arn" { value = aws_iam_role.enrich.arn }
+output "sheets_role_arn" { value = aws_iam_role.sheets.arn }
+output "api_role_arn" { value = aws_iam_role.api.arn }
+output "deepseek_secret_arn" { value = aws_secretsmanager_secret.deepseek.arn }
+output "twilio_secret_arn" { value = aws_secretsmanager_secret.twilio.arn }
+output "google_sheets_secret_arn" { value = aws_secretsmanager_secret.google_sheets.arn }
+output "lambda_packages_bucket" { value = var.lambda_packages_bucket }

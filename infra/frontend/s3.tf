@@ -3,7 +3,7 @@ locals {
 }
 
 resource "aws_s3_bucket" "frontend" {
-  bucket = var.frontend_bucket_name
+  bucket = "api-tx-frontend-${data.aws_caller_identity.current.account_id}"
 }
 
 resource "aws_s3_object" "frontend" {

@@ -1,12 +1,11 @@
-name: Deploy Frontend
+name: Deploy Core Infrastructure
 
 on:
   push:
     branches: [main]
     paths:
-      - "frontend/**"
-      - "infra/frontend/**"
-      - ".github/workflows/deploy-frontend.yml"
+      - "infra/core/**"
+      - ".github/workflows/deploy-core.yml"
   workflow_dispatch:
 
 permissions:
@@ -18,18 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Build frontend
-        working-directory: frontend
-        env:
-          VITE_API_URL: ${{ secrets.API_URL }}
-        run: |
-          npm install
-          npm run build
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -43,20 +30,30 @@ jobs:
 
       - name: Terraform fmt check
         run: terraform fmt -check -recursive
-        working-directory: infra/frontend
+        working-directory: infra/core
 
       - name: Terraform init
-        working-directory: infra/frontend
+        working-directory: infra/core
         env:
           TFSTATE_BUCKET: ${{ secrets.TFSTATE_BUCKET }}
           TFSTATE_DYNAMODB: ${{ secrets.TFSTATE_DYNAMODB }}
         run: |
           terraform init \
             -backend-config="bucket=${TFSTATE_BUCKET}" \
-            -backend-config="key=api-tx/frontend.tfstate" \
+            -backend-config="key=api-tx/core.tfstate" \
             -backend-config="region=ap-southeast-2" \
             -backend-config="dynamodb_table=${TFSTATE_DYNAMODB}"
 
+      - name: Terraform plan
+        if: github.ref != 'refs/heads/main'
+        working-directory: infra/core
+        env:
+          TF_VAR_lambda_packages_bucket: ${{ secrets.LAMBDA_PACKAGES_BUCKET }}
+        run: terraform plan
+
       - name: Terraform apply
-        working-directory: infra/frontend
-        run: terraform apply -auto-approve -var-file="env/prod.tfvars"
+        if: github.ref == 'refs/heads/main'
+        working-directory: infra/core
+        env:
+          TF_VAR_lambda_packages_bucket: ${{ secrets.LAMBDA_PACKAGES_BUCKET }}
+        run: terraform apply -auto-approve

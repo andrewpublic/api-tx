@@ -1,5 +1,3 @@
-variable "frontend_bucket_name" {
-  description = "Name of the frontend bucket storing the static SPA."
-  type        = string
+variable "aws_region" {
+  default = "ap-southeast-2"
 }
-

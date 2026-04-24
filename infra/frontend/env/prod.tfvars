@@ -1,2 +1,1 @@
-frontend_bucket_name = "frontend-static-spa"
-
+# No variables required — bucket name is derived from AWS account ID

@@ -6,3 +6,7 @@ node_modules/
 dummy*
 build/
 .DS_Store
+.mcp.json
+settings.local.json
+.terraform/
+.terraform.lock.hcl

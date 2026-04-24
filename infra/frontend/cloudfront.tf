@@ -1,5 +1,5 @@
 locals {
-  s3_origin_id = "${var.frontend_bucket_name}-origin"
+  s3_origin_id = "${aws_s3_bucket.frontend.id}-origin"
 }
 
 resource "aws_cloudfront_origin_access_control" "frontend" {
