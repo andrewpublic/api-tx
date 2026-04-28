@@ -27,9 +27,13 @@ async function getSheetsApi(): Promise<ReturnType<typeof google.sheets>> {
   return sheetsApi;
 }
 
-function formatAmount(amountStr: string): string {
-  const n = parseFloat(amountStr);
-  return n < 0 ? `$${Math.abs(n).toFixed(2)}` : `$${n.toFixed(2)} (credit)`;
+function toMelbourneDate(isoString: string): string {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Melbourne",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date(isoString));
+  const p = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${p.year}-${p.month}-${p.day}`;
 }
 
 export const handler = async (event: SQSEvent): Promise<void> => {
@@ -56,27 +60,31 @@ export const handler = async (event: SQSEvent): Promise<void> => {
         continue;
       }
 
-      const date = (tx.settledAt || tx.createdAt).substring(0, 10);
+      const date        = toMelbourneDate(tx.settledAt || tx.createdAt);
+      const subcategory = tx.subcategory ?? tx.category ?? "";
+      const amount      = (Math.abs(tx.amountInCents) / 100).toFixed(2);
+      const sheetTab    = tx.isJoint ? "2up" : "Expenses";
 
-      // Columns match the Expenses sheet: Date | Description | Bucket | Category | Amount (AUD) | Split | Notes
+      // Columns: Date | ID | Description | Bucket | Subcategory | Amount | Split | Notes
       const row: string[] = [
         date,
+        transactionId,
         tx.merchantNormalized ?? tx.description,
-        tx.bucket    ?? "",
-        tx.category  ?? "",
-        formatAmount(tx.amount),
-        tx.split     ?? "Personal",
-        `id:${transactionId}`,
+        tx.bucket     ?? "",
+        subcategory,
+        amount,
+        tx.split      ?? "Personal",
+        "",
       ];
 
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: "Expenses!A:G",
+        range: `${sheetTab}!A:H`,
         valueInputOption: "USER_ENTERED",
         requestBody: { values: [row] },
       });
 
-      console.log(`Appended: ${date} | ${row[1]} | ${tx.bucket} | ${tx.category} | ${row[4]}`);
+      console.log(`Appended to ${sheetTab}: ${date} | ${row[2]} | ${tx.bucket} | ${subcategory} | ${amount}`);
 
       await dynamo.send(new UpdateItemCommand({
         TableName: TRANSACTIONS_TABLE,

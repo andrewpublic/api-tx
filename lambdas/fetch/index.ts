@@ -19,6 +19,55 @@ async function decryptApiKey(encryptedBase64: string): Promise<string> {
   return Buffer.from(result.Plaintext!).toString("utf8");
 }
 
+async function ensureTwoUpAccountId(user: UserItem, apiKey: string): Promise<string | null> {
+  if (user.twoUpAccountId) return user.twoUpAccountId;
+
+  const res = await fetch("https://api.up.com.au/api/v1/accounts?page[size]=25", {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) {
+    console.error(`Failed to fetch accounts: ${res.status}`);
+    return null;
+  }
+
+  const data = await res.json() as { data: Array<{ id: string; attributes: { ownershipType: string } }> };
+  const joint = data.data.find(a => a.attributes.ownershipType === "JOINT");
+  if (!joint) return null;
+
+  await dynamo.send(new UpdateItemCommand({
+    TableName: USERS_TABLE,
+    Key: marshall({ userId: user.userId }),
+    UpdateExpression: "SET twoUpAccountId = :id",
+    ExpressionAttributeValues: marshall({ ":id": joint.id }),
+  }));
+  user.twoUpAccountId = joint.id;
+  console.log(`Stored 2up account ID: ${joint.id}`);
+  return joint.id;
+}
+
+function shouldProcess(
+  tx: UpTransaction,
+  twoUpAccountId: string | null,
+): { keep: boolean; isJoint: boolean } {
+  // Skip credits (positive = money in)
+  if (tx.attributes.amount.valueInBaseUnits > 0) return { keep: false, isJoint: false };
+
+  const accountId = tx.relationships.account.data.id;
+  const isJoint   = accountId === twoUpAccountId;
+
+  // 2up joint account transactions always kept, routed to 2up sheet
+  if (isJoint) return { keep: true, isJoint: true };
+
+  // Personal account: check for transfers
+  const transferToId = tx.relationships.transferAccount?.data?.id ?? null;
+  if (transferToId !== null) {
+    // Only keep transfers going TO the 2up account (contribution to joint spending)
+    return { keep: transferToId === twoUpAccountId, isJoint: false };
+  }
+
+  return { keep: true, isJoint: false };
+}
+
 async function fetchUpBankTransactions(apiKey: string, since: string): Promise<UpTransaction[]> {
   const transactions: UpTransaction[] = [];
   let url: string | null =
@@ -69,19 +118,27 @@ export const handler = async (event: { userId?: string }): Promise<void> => {
 
   for (const user of users) {
     try {
-      const apiKey = await decryptApiKey(user.apiKeyEncrypted);
-      const since  = user.lastSyncAt || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const apiKey         = await decryptApiKey(user.apiKeyEncrypted);
+      const twoUpAccountId = await ensureTwoUpAccountId(user, apiKey);
+
+      // First sync: backfill 7 days. Subsequent: last 10 min (overlaps 5-min schedule)
+      const since = user.lastSyncAt
+        ? new Date(Date.now() - 10 * 60 * 1000).toISOString()
+        : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
       const transactions = await fetchUpBankTransactions(apiKey, since);
       console.log(`Fetched ${transactions.length} settled transactions for ${user.userId}`);
 
-      const newTransactions: UpTransaction[] = [];
+      const toProcess: Array<{ tx: UpTransaction; isJoint: boolean }> = [];
       for (const tx of transactions) {
-        if (!(await txExists(user.userId, tx.id))) newTransactions.push(tx);
+        const { keep, isJoint } = shouldProcess(tx, twoUpAccountId);
+        if (!keep) continue;
+        if (await txExists(user.userId, tx.id)) continue;
+        toProcess.push({ tx, isJoint });
       }
-      console.log(`${newTransactions.length} new`);
+      console.log(`${toProcess.length} new (${transactions.length - toProcess.length} skipped/duped)`);
 
-      for (const tx of newTransactions) {
+      for (const { tx, isJoint } of toProcess) {
         const item = {
           userId:         user.userId,
           transactionId:  tx.id,
@@ -93,6 +150,7 @@ export const handler = async (event: { userId?: string }): Promise<void> => {
           createdAt:      tx.attributes.createdAt,
           settledAt:      tx.attributes.settledAt ?? "",
           upCategory:     tx.relationships.category?.data?.id ?? "",
+          isJoint,
           enriched:       false,
           syncedToSheets: false,
           fetchedAt:      new Date().toISOString(),
@@ -114,11 +172,11 @@ export const handler = async (event: { userId?: string }): Promise<void> => {
       }
 
       // Send to enrich queue in batches of 10
-      for (let i = 0; i < newTransactions.length; i += 10) {
-        const batch = newTransactions.slice(i, i + 10);
+      for (let i = 0; i < toProcess.length; i += 10) {
+        const batch = toProcess.slice(i, i + 10);
         await sqs.send(new SendMessageBatchCommand({
           QueueUrl: ENRICH_QUEUE_URL,
-          Entries: batch.map((tx, idx) => ({
+          Entries: batch.map(({ tx }, idx) => ({
             Id: String(idx),
             MessageBody: JSON.stringify({ userId: user.userId, transactionId: tx.id } satisfies EnrichMessage),
           })),

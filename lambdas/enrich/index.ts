@@ -5,7 +5,7 @@ import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import type { SQSEvent } from "aws-lambda";
 import OpenAI from "openai";
 import type { EnrichMessage, SheetsMessage, EnrichmentResult, TransactionItem, UserItem } from "../types.js";
-import { BUDGET_THRESHOLDS } from "../types.js";
+import { SUBCATEGORY_THRESHOLDS } from "../types.js";
 
 const dynamo        = new DynamoDBClient({});
 const secretsClient = new SecretsManagerClient({});
@@ -45,33 +45,40 @@ async function getDeepSeekClient(): Promise<OpenAI> {
 
 const SYSTEM_PROMPT = `You are a personal finance assistant categorising Australian bank transactions.
 
-Budget buckets and sub-categories:
-- "Short Savings": "Cool Stuff" (entertainment, events, concerts, experiences), "Medical" (health appointments, pharmacy, supplements), "Gifts" (presents for others)
-- "Spendathon": "Solo" (personal groceries, meals, coffee, personal items, fuel), "Partner – Regular" (regular shared expenses with partner), "Partner – Special" (special occasions with partner, flowers, dates), "Clothes" (clothing, accessories)
-- "Bills": "Rent" (housing rent payments), "Utilities" (subscriptions, phone, internet, electricity, gym, streaming services, boxing, haircuts)
-- "Long Savings": "Savings" (savings transfers, investments, superannuation)
-- "Buffer": "Reserve" (emergency funds), "Marketing" (business or marketing expenses)
+Valid subcategories and their parent buckets:
+- "Cool Stuff" (Short Savings) — entertainment, events, concerts, experiences
+- "Medical" (Short Savings) — health appointments, pharmacy, supplements, protein powder
+- "Gifts" (Short Savings) — presents for others
+- "Solo" (Spendathon) — personal groceries, meals, coffee, personal items, fuel
+- "Partner – Regular" (Spendathon) — regular shared expenses with partner
+- "Partner – Special" (Spendathon) — special occasions with partner, flowers, dates
+- "Clothes" (Spendathon) — clothing, accessories
+- "Rent" (Bills) — housing rent payments, BPAY rent
+- "Utilities" (Bills) — subscriptions, phone, internet, electricity, gym, streaming, boxing, haircuts
+- "Savings" (Long Savings) — savings transfers, investments, superannuation
+- "Reserve" (Buffer) — emergency funds
+- "Marketing" (Buffer) — business or marketing expenses
+
+Rules:
+- Savings account transfers → Savings / Long Savings
+- BPAY rent payments → Rent / Bills
+- Supermarkets (Woolworths, Coles, Aldi, IGA) → Solo / Spendathon
+- Cafes, restaurants, UberEats, DoorDash → Solo / Spendathon (unless clearly a date → Partner – Special)
+- Petrol stations → Solo / Spendathon
+- Netflix, Spotify, Disney+, Apple, Claude, etc. → Utilities / Bills
+- Gyms, boxing clubs → Utilities / Bills
+- Pharmacies, medical centres, physio → Medical / Short Savings
+- Protein powder, supplements → Medical / Short Savings
 
 Split types:
 - "Personal" — solely your own expense
 - "Shared" — split equally with others
 - "Partner's" — partner's expense you're tracking
 
-Rules:
-- Savings account transfers → Long Savings / Savings
-- BPAY rent payments → Bills / Rent
-- Supermarkets (Woolworths, Coles, Aldi, IGA) → Spendathon / Solo
-- Cafes, restaurants, UberEats, DoorDash → Spendathon / Solo (unless clearly a date → Partner – Special)
-- Petrol stations → Spendathon / Solo
-- Netflix, Spotify, Disney+, Apple, Claude, etc. → Bills / Utilities
-- Gyms, boxing clubs → Bills / Utilities
-- Pharmacies, medical centres, physio → Short Savings / Medical
-- Protein powder, supplements → Short Savings / Medical
-
 Normalise merchantNormalized to a clean human-readable name (e.g. "ALDI STORES #42" → "Aldi").
 
 Return ONLY valid JSON, no markdown:
-{"bucket":"...","category":"...","split":"...","merchantNormalized":"..."}`;
+{"bucket":"...","subcategory":"...","split":"...","merchantNormalized":"..."}`;
 
 async function categorise(
   description: string,
@@ -94,23 +101,51 @@ async function categorise(
   return JSON.parse(res.choices[0]!.message.content!.trim()) as EnrichmentResult;
 }
 
-// ── Budget threshold check ────────────────────────────────────────────────────
+// ── Pay cycle spend ───────────────────────────────────────────────────────────
 
-async function getMonthlyBucketSpend(userId: string, bucket: string): Promise<number> {
-  const now          = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+function getPayCycleStartISO(): string {
+  // Determine current date in Melbourne
+  const nowParts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Melbourne",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const np = Object.fromEntries(nowParts.map(({ type, value }) => [type, value]));
+  const day   = parseInt(np.day!);
+  const month = parseInt(np.month!); // 1-indexed
+  const year  = parseInt(np.year!);
+
+  // Cycle starts on the 14th; if today is before the 14th, use last month's 14th
+  let startMonth = day >= 14 ? month : month - 1;
+  let startYear  = year;
+  if (startMonth === 0) { startMonth = 12; startYear--; }
+
+  // Convert Melbourne midnight on the 14th → UTC
+  // Strategy: check what Melbourne shows for UTC midnight on the 14th to get the offset
+  const utcMidnight14 = new Date(Date.UTC(startYear, startMonth - 1, 14, 0, 0, 0));
+  const melbHourParts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Melbourne",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(utcMidnight14);
+  const hp = Object.fromEntries(melbHourParts.map(({ type, value }) => [type, value]));
+  const offsetMs = (parseInt(hp.hour!) * 60 + parseInt(hp.minute!)) * 60 * 1000;
+
+  // Melbourne midnight = UTC midnight − offset
+  return new Date(utcMidnight14.getTime() - offsetMs).toISOString();
+}
+
+async function getPayCycleSubcategorySpend(userId: string, subcategory: string): Promise<number> {
+  const cycleStart = getPayCycleStartISO();
 
   const result = await dynamo.send(new QueryCommand({
     TableName: TRANSACTIONS_TABLE,
     IndexName: "userId-settledAt-index",
     KeyConditionExpression: "userId = :uid AND settledAt >= :start",
-    FilterExpression: "#bucket = :bucket AND amountInCents < :zero",
-    ExpressionAttributeNames: { "#bucket": "bucket" },
+    FilterExpression: "subcategory = :sub AND amountInCents < :zero",
     ExpressionAttributeValues: marshall({
-      ":uid":    userId,
-      ":start":  startOfMonth,
-      ":bucket": bucket,
-      ":zero":   0,
+      ":uid":   userId,
+      ":start": cycleStart,
+      ":sub":   subcategory,
+      ":zero":  0,
     }),
     ProjectionExpression: "amountInCents",
   }));
@@ -169,11 +204,11 @@ export const handler = async (event: SQSEvent): Promise<void> => {
         TableName: TRANSACTIONS_TABLE,
         Key: marshall({ userId, transactionId }),
         UpdateExpression:
-          "SET #bucket = :bucket, category = :cat, #split = :split, merchantNormalized = :merchant, enriched = :true, enrichedAt = :now",
+          "SET #bucket = :bucket, subcategory = :sub, #split = :split, merchantNormalized = :merchant, enriched = :true, enrichedAt = :now",
         ExpressionAttributeNames: { "#bucket": "bucket", "#split": "split" },
         ExpressionAttributeValues: marshall({
           ":bucket":   enrichment.bucket,
-          ":cat":      enrichment.category,
+          ":sub":      enrichment.subcategory,
           ":split":    enrichment.split,
           ":merchant": enrichment.merchantNormalized,
           ":true":     true,
@@ -181,13 +216,12 @@ export const handler = async (event: SQSEvent): Promise<void> => {
         }),
       }));
 
-      // Budget alert — debits only, skip savings transfers
-      const isDebit   = tx.amountInCents < 0;
-      const isSavings = enrichment.bucket === "Long Savings";
-      const threshold = BUDGET_THRESHOLDS[enrichment.bucket];
+      // Budget alert — skip savings and zero-threshold subcategories
+      const isSavings = enrichment.subcategory === "Savings";
+      const threshold = SUBCATEGORY_THRESHOLDS[enrichment.subcategory];
 
-      if (isDebit && !isSavings && threshold !== undefined) {
-        const spent = await getMonthlyBucketSpend(userId, enrichment.bucket);
+      if (!isSavings && threshold !== undefined && threshold > 0) {
+        const spent = await getPayCycleSubcategorySpend(userId, enrichment.subcategory);
         const pct   = (spent / threshold) * 100;
 
         if (pct >= 90) {
@@ -198,7 +232,7 @@ export const handler = async (event: SQSEvent): Promise<void> => {
           const user = unmarshall(userResult.Item!) as UserItem;
 
           if (user.mobileNumber) {
-            const msg = `Budget alert: ${enrichment.bucket} is at ${Math.round(pct)}% ($${spent.toFixed(0)} of $${threshold}) this month.`;
+            const msg = `Budget alert: ${enrichment.subcategory} is at ${Math.round(pct)}% ($${spent.toFixed(0)} of $${threshold}) this pay cycle.`;
             await sendSmsAlert(user.mobileNumber, msg);
             console.log(`SMS sent: ${msg}`);
           }

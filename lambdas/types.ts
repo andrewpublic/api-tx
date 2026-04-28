@@ -23,6 +23,7 @@ export interface UpTransaction {
   };
   relationships: {
     account: { data: { id: string } };
+    transferAccount?: { data: { id: string } | null };
     category?: { data: { id: string } | null };
     parentCategory?: { data: { id: string } | null };
   };
@@ -46,6 +47,7 @@ export interface UserItem {
   active: boolean;
   createdAt: string;
   lastSyncAt?: string;
+  twoUpAccountId?: string;
 }
 
 export interface TransactionItem {
@@ -59,12 +61,14 @@ export interface TransactionItem {
   createdAt: string;
   settledAt: string;
   upCategory: string;
+  isJoint: boolean;
   enriched: boolean;
   syncedToSheets: boolean;
   fetchedAt: string;
   // Set by enrich lambda
   bucket?: string;
-  category?: string;
+  subcategory?: string;
+  category?: string; // legacy — use subcategory
   split?: string;
   merchantNormalized?: string;
   enrichedAt?: string;
@@ -76,19 +80,26 @@ export interface TransactionItem {
 
 export interface EnrichmentResult {
   bucket: string;
-  category: string;
+  subcategory: string;
   split: string;
   merchantNormalized: string;
 }
 
-export type BudgetThresholds = Record<string, number>;
+export type SubcategoryThresholds = Record<string, number>;
 
-export const BUDGET_THRESHOLDS: BudgetThresholds = {
-  "Short Savings": 658,
-  Spendathon:      1550,
-  Bills:           2842,
-  "Long Savings":  2500,
-  Buffer:          150,
+export const SUBCATEGORY_THRESHOLDS: SubcategoryThresholds = {
+  "Cool Stuff":        400,
+  "Medical":           150,
+  "Gifts":             108,
+  "Solo":              800,
+  "Partner – Regular": 400,
+  "Partner – Special": 100,
+  "Clothes":           250,
+  "Rent":              2042,
+  "Utilities":         800,
+  "Savings":           2500,
+  "Reserve":           0,
+  "Marketing":         150,
 };
 
 // ── SQS message payloads ──────────────────────────────────────────────────────
